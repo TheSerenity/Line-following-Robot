@@ -13,7 +13,6 @@ const int LEDRed = 7;
 const int LEDGreen = 11;
 const int LEDBlue = 12;
 
-
 // Vars
 bool leftStep = 0; // Unused
 bool rightStep = 0; // Unused
