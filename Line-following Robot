@@ -1,0 +1,208 @@
+// Pin numbers
+const int lSensor = 2; // Left sensor
+const int rSensor = 3; // Right sensor
+const int mSensor = 4; // mid sensor
+const int button = 13; // Button
+const int lMotorPinForth = 5; // Left motor forth (when HIGH and opposite of lMotorPinBack)
+const int lMotorPinBack = 6; // Left motor back (when HIGH and opposite of lMotorPinForth)
+const int rMotorPinForth = 10; // Right motor (when HIGH and opposite of rMotorPinBack)
+const int rMotorPinBack = 9; // Right motor back (when HIGH and opposite of rMotorPinForth)
+const bool hvid = 0;
+const bool sort = 1;
+const int LEDRed = 7;
+const int LEDGreen = 11;
+const int LEDBlue = 12;
+
+
+// Vars
+bool leftStep = 0; // Unused
+bool rightStep = 0; // Unused
+int totalSteps = 0; // 20 = 1 round/rotation
+int RobotStarted = 0; // In use with interrupt
+int Speed = 110; // Standard speed of wheels
+int LEDCounter = 0;
+const int RTime = 8;
+const int RSpeed = 150;
+
+// Function prototypes
+void lMotor(int spd, bool Forth); // Control left motor
+void rMotor(int spd, bool Forth); // Control right motor
+void bMotors(int spd, bool Forth); // Control both motors
+void rotate(bool anticlockwise, int Time); // Rotate on axis
+void interruptLeftMotor(); // Function when left sensor is interrupted by a black line
+void interruptRightMotor(); // Function when right sensor is interrupted by a black line
+
+void setup() {
+  /*
+   * Pin modes OUTPUT/INPUT
+   */
+  // Motors
+  pinMode(lMotorPinForth, OUTPUT);
+  pinMode(lMotorPinBack, OUTPUT);
+  pinMode(rMotorPinForth, OUTPUT);
+  pinMode(rMotorPinBack, OUTPUT);
+
+  // RGB Led
+  pinMode(LEDRed, OUTPUT);
+  pinMode(LEDGreen, OUTPUT);
+  pinMode(LEDBlue, OUTPUT);
+
+  // Buttons
+  pinMode(button, INPUT);
+}
+
+void loop() {
+
+  if(RobotStarted)
+  {
+    bool right = digitalRead(rSensor);
+    bool mid = digitalRead(mSensor);
+    bool left = digitalRead(lSensor);
+    if(left==0 && mid==1 && right==1)
+    {
+      // Black line detected on LEFT sensor
+      rotate(0, RTime);
+      bMotors(Speed, 1);
+    }
+    else if(left==1 && mid==1 && right==0)
+    {
+      // Black line detected on RIGHT sensor
+      rotate(1, RTime);
+      bMotors(Speed, 1);
+    }
+    else if(left==1 && mid==1 && right==1)
+    {
+      bMotors(0, 0);
+      digitalWrite(LEDRed, HIGH);
+      digitalWrite(LEDBlue, LOW);
+      digitalWrite(LEDGreen, LOW);
+    }
+    else if(left==0 && mid==0 && right==0)
+    {
+      delay(50);
+      if(left==0 && mid==0 && right==0)
+      {
+        bMotors(Speed, 0); 
+      }
+    }
+    else if(left==0 && mid==0 && right==1)
+    {
+      rotate(0, RTime);
+      bMotors(Speed, 1);
+    }
+    else if(left==1 && mid==0 && right==0)
+    {
+      rotate(1, RTime);
+      bMotors(Speed, 1);
+    }
+    else if(left==0 && mid==1 && right==0)
+    {
+      bMotors(Speed, 1);
+    }
+    else if(left==1 && mid==0 && right==1)
+    {
+      bMotors(Speed, 1);
+    }
+    else
+    {
+      bMotors(Speed, 1);
+    }
+  }
+
+  bool buttonState = digitalRead(button);
+  if(buttonState == HIGH)
+  {
+    /*
+     * Start the robot
+     */
+    RobotStarted = 1;
+
+    // Red-Yellow-Green RGB led before driving
+    digitalWrite(LEDRed, HIGH);
+    delay(1000);
+    digitalWrite(LEDRed, LOW);
+    digitalWrite(LEDBlue, HIGH);
+    delay(1000);
+    digitalWrite(LEDBlue, LOW);
+    digitalWrite(LEDGreen, HIGH);
+    delay(100);
+    digitalWrite(LEDGreen, LOW);
+    // Drive both motors infinitely
+    bMotors(Speed, 1);
+
+    // Small delay to display green light
+    //delay(250);
+  }
+  delay(5);
+  LEDCounter += 5;
+  if(LEDCounter >= 150 && RobotStarted)
+  {
+    LEDCounter = 0;
+    if(digitalRead(LEDRed) == 1)
+    {
+      digitalWrite(LEDRed, LOW);
+      digitalWrite(LEDGreen, LOW);
+      digitalWrite(LEDBlue, HIGH);
+    }
+    else
+    {
+      digitalWrite(LEDRed, HIGH);
+      digitalWrite(LEDGreen, LOW);
+      digitalWrite(LEDBlue, LOW);
+    }
+  }
+}
+
+void lMotor(int spd, bool Forth)
+{
+  if(Forth==1) 
+  {
+    analogWrite(lMotorPinForth, spd);
+    analogWrite(lMotorPinBack, 0);
+  }
+  else
+  {
+    analogWrite(lMotorPinForth, 0);
+    analogWrite(lMotorPinBack, spd);
+  }
+}
+
+void rMotor(int spd, bool Forth)
+{
+  if(Forth==1) 
+  {
+    analogWrite(rMotorPinForth, spd);
+    analogWrite(rMotorPinBack, 0);
+  }
+  else
+  {
+    analogWrite(rMotorPinForth, 0);
+    analogWrite(rMotorPinBack, spd);
+  }
+}
+
+void bMotors(int spd, bool Forth)
+{
+  rMotor(spd, Forth);
+  lMotor(spd, Forth);
+}
+
+void rotate(bool anticlockwise, int Time)
+{
+  /*
+   * Rotate anti- /clockwise
+   */
+   if(anticlockwise==1)
+   {
+     lMotor(RSpeed, 0);
+     rMotor(RSpeed, 1);
+   }
+   else
+   {
+     lMotor(RSpeed, 1);
+     rMotor(RSpeed, 0);
+   }
+
+   delay(Time); // Wait before stop rotating
+   bMotors(Speed, 1); // Turn off both motors
+}
