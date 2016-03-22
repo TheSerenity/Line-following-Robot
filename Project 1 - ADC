@@ -1,0 +1,67 @@
+/*
+ * MaxSonar (Distance Sensor).cpp
+ */ 
+
+// Includes
+#include <avr/io.h>		 // Included by default
+#define F_CPU 1000000UL  // Set the speed of the processor (It is initially 1 MHz)
+#include <util/delay.h>  // Include this file to use the _delay_ms(...) function
+
+int main(void)
+{
+	// Declare inputs/outputs
+	DDRB |= 0b00000110; // Set port B as outputs for the ADC's binary value
+	DDRC |= 0b00111111; // Set port C as outputs for the ADC's binary value
+	
+	// Vars
+	// The counter is split on two ports, B and C
+	// PORTB: Bit 1(LSB) and 2
+	// PORTC: Bit 0 through 5(MSB)
+	unsigned char count = 0; // Var for counting (ADC)
+
+	// Infinite loop
+	while(1)
+	{
+		/*
+		* Simulate an 8-bit counter
+		*/
+
+		// If input from comparator (ADC) is LOW, start/continue counting
+		if(PORTB0 == 0)
+		{
+			// Count increment by 1
+			count++;
+			
+			// Short delay to keep the micro controller synchronous
+			_delay_ms(1);
+		}
+		else
+		{
+			// If input from comparator (ADC) is NOT low), stop counting
+			// Current binary number of 'count' is the converted analog value from the distance sensor
+			// Output the binary number
+			unsigned char tempB = PORTB; // Set tempB to be equal to PORTB
+			unsigned char tempC = PORTC; // Set tempC to be equal to PORTC
+			
+			// Prepare tempB, assign Bit 1+2 (PORTB) to be the first two Bits of count
+			tempB &= 0xFC; // Clear bit 2 through 7 to keep Bit 0+1 for Bit 1(LSB) and 2 on PORTB
+			tempB |= (count & 0x03) << 1; // Set first two bits equal to count and shift 1 to the left to match PB1 and PB2
+			
+			// Prepare tempC, assign Bit 0 through 5 (PORTC) to be the last six Bits of count
+			tempC &= 0x03; // Clear bit 0+1 to keep bit 0 through 5(MSB) on PORTC
+			tempC |= (count & 0xFC) >> 2; // Set last six bits equal to count and shift 2 to the right to match PC 0 through 5
+			
+			// Assign 'count' to corresponding ports and values [0; 1]
+			PORTB |= tempB;
+			PORTC |= tempC;
+			
+			// Reset 'count' var
+			count = 0;
+
+			// Wait 100ms before converting the sensor's analog to digital value again
+			// 10 measurements/calculations a second should be sufficient for detecting an obstacle
+			_delay_ms(100);
+		}
+	}
+}
+
